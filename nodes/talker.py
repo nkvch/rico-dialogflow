@@ -400,9 +400,12 @@ def callback_common(response, sound_file, playback_queue):
         param_str = unicode(param)
         colon_idx = param_str.find(':')
         param_type = param_str[0:colon_idx]
-        assert param_type == 'string_value'
+        # assert param_type == 'string_value'
         param_value = param_str[colon_idx+1:].strip()[1:-1]
-
+        value_end = param_value.find('\"')
+        if value_end != -1:
+            param_value = param_value[0:value_end]
+        
         print 'param_name: "' + param_name + '"'
         print 'param_type: "' + param_type + '"'
         print 'param_value: "' + param_value + '"'
@@ -412,11 +415,12 @@ def callback_common(response, sound_file, playback_queue):
 
     cmd.confidence = response.query_result.intent_detection_confidence
     cmd.response_text = response.query_result.fulfillment_text
+    print "CMD: ", cmd
     pub_cmd.publish(cmd)
 
     if len(response.query_result.fulfillment_text) > 0:
         pub_txt_msg.publish(response.query_result.fulfillment_text)
-        playback_queue.addSound(sound_file)
+        #playback_queue.addSound(sound_file)
 
 def callback(data, agent_name, playback_queue, cred_file):
     rospy.loginfo("I heard %s", data.data)
@@ -483,6 +487,7 @@ class Odmieniacz:
 
     def odmien(self, s):
         result = copy.copy(s)
+        print "mam odmienic:", s
         while True:
             l_brace_idx = result.find('{')
             if l_brace_idx < 0:
@@ -491,13 +496,14 @@ class Odmieniacz:
             if r_brace_idx < 0:
                 break
             odm = result[l_brace_idx+1:r_brace_idx]
-            print odm
+            print "odm:", odm
             quot_idx1 = odm.find('"')
             quot_idx2 = odm.find('"', quot_idx1+1)
             word_orig = odm[quot_idx1+1:quot_idx2]
             print word_orig
             sep_idx = odm.find(',', quot_idx2+1)
             przyp = odm[sep_idx+1:].strip()
+            print "przyp:", przyp
             word_m, word_p = self.przypadki(word_orig, przyp)
             result = result[0:l_brace_idx] + word_p + result[r_brace_idx+1:]
         return result
