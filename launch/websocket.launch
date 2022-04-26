@@ -2,7 +2,7 @@
   <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/>
   
   <node pkg="dialogflow" type="talker.py" name="talker" output="screen">
-    <param name="agent_name" value="incare-dialog-agent" />
+    <param name="agent_name" value="robot-rico-qrct" />
     <param name="data_dir" value="$(find dialogflow)/data" />
   </node>
 

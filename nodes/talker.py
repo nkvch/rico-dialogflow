@@ -144,7 +144,7 @@ class SaySentenceActionServer(object):
             sound_fname = self.__sentences_container.getSentence(sentence_uni_no_prefix)
             if sound_fname is None:
                 print u'using dialogflow for sentence "{}"'.format(sentence_uni)
-                response, sound_params = detect_intent_text(self._agent_name, "test_sess_012", ss.lower(), "pl", self._cred_file)
+                response, sound_params = detect_intent_text(self._agent_name, "me", ss.lower(), "pl", self._cred_file)
                 sound_params = (sound_params[0], sound_params[1], prefix_time_length)     # Cut out the prefix
                 self.__sentences_container.addSentence(sentence_uni_no_prefix, sound_params[0])
                 print 'received response:', response.query_result
@@ -424,12 +424,12 @@ def callback_common(response, sound_file, playback_queue):
 
 def callback(data, agent_name, playback_queue, cred_file):
     rospy.loginfo("I heard %s", data.data)
-    response, sound_file = detect_intent_text(agent_name, "test_sess_012", data.data, "pl", cred_file)
+    response, sound_file = detect_intent_text(agent_name, "me", data.data, "pl", cred_file)
     callback_common(response, sound_file, playback_queue)
 
 def callback_wav(data, agent_name, playback_queue, cred_file):
     rospy.loginfo("I recorded %s", data.data)
-    response, sound_file = detect_intent_audio(agent_name, "test_sess_012", data.data, "pl", cred_file)
+    response, sound_file = detect_intent_audio(agent_name, "me", data.data, "pl", cred_file)
     pub_txt_voice_cmd_msg.publish(response.query_result.query_text)
     callback_common(response, sound_file, playback_queue)
 
@@ -541,13 +541,13 @@ def listener():
     exit(0)
     '''
     #text = raw_input('.')
-    #response, sound_fname = detect_intent_text(agent_name, "test_sess_012", u'niekorzystne warunki pogodowe ' + text, "pl")
+    #response, sound_fname = detect_intent_text(agent_name, "me", u'niekorzystne warunki pogodowe ' + text, "pl")
     #sound_fname = (sound_fname[0], sound_fname[1], 0.6)
     #play_sound(sound_fname[0], 0.0)
     #print 'received response:', response.query_result
     #exit(0)
 
-    if not 'GOOGLE_CREDENTIALS_INCARE_DIALOG' in os.environ:
+    if not 'GOOGLE_CREDENTIALS_INCARE_DIALOG_' in os.environ:
         raise Exception('Env variable "GOOGLE_CREDENTIALS_INCARE_DIALOG" is not set')
     if not 'GOOGLE_CREDENTIALS_TEXT_TO_SPEECH' in os.environ:
         raise Exception('Env variable "GOOGLE_CREDENTIALS_TEXT_TO_SPEECH" is not set')
