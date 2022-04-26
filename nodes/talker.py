@@ -547,12 +547,12 @@ def listener():
     #print 'received response:', response.query_result
     #exit(0)
 
-    if not 'GOOGLE_CREDENTIALS_INCARE_DIALOG_' in os.environ:
-        raise Exception('Env variable "GOOGLE_CREDENTIALS_INCARE_DIALOG" is not set')
+    if not 'GOOGLE_CONVERSATIONAL_DIALOGFLOW' in os.environ:
+        raise Exception('Env variable "GOOGLE_CONVERSATIONAL_DIALOGFLOW" is not set')
     if not 'GOOGLE_CREDENTIALS_TEXT_TO_SPEECH' in os.environ:
         raise Exception('Env variable "GOOGLE_CREDENTIALS_TEXT_TO_SPEECH" is not set')
 
-    cred_file_incare_dialog = os.environ['GOOGLE_CREDENTIALS_INCARE_DIALOG']
+    cred_file_incare_dialog = os.environ['GOOGLE_CONVERSATIONAL_DIALOGFLOW']
     cred_file_text_to_speech = os.environ['GOOGLE_CREDENTIALS_TEXT_TO_SPEECH']
 
     rospy.Subscriber("txt_send", String, lambda x: callback(x, agent_name, playback_queue, cred_file_incare_dialog))
