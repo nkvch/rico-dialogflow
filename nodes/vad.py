@@ -61,7 +61,7 @@ THR_POWER = 100
 DO_NORMALIZE = True
 
 # device id
-DEVICE_ID = 6
+DEVICE_ID = 0
 
 
 
