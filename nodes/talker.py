@@ -6,6 +6,7 @@ import rospy
 import actionlib
 from std_msgs.msg import String, Bool
 import tiago_msgs.msg
+from rico_context.msg import HistoryEvent
 import random
 
 import time
@@ -21,12 +22,17 @@ import codecs
 import shutil
 import unicodedata
 import pl_nouns.odmiana as ro
+from google.cloud import texttospeech as tts
 
 import pyaudio
+import subprocess
+import json
 
 import wave
 
-from dialogflow_agent.interfaces.DialogflowAgent import DialogflowAgent
+# from dialogflow_agent.interfaces.DialogflowAgent import DialogflowAgent
+from language_processor.srv import DetectIntentAndRetrieveParams, DetectIntentAndRetrieveParamsResponse
+from task_database.srv import GetScenarioForIntent, GetParamsForScenario
 
 def strip_inter(string):
     return string.replace(".", "").replace(",", "")
@@ -137,14 +143,14 @@ def play_sound(fname, start_pos):
 
 
 class SaySentenceActionServer(object):
-    def __init__(self, name, playback_queue, odm, sentence_dict, dialogflow_agent, sentences_container):
+    def __init__(self, name, playback_queue, odm, sentence_dict, sentences_container, cred_file):
         print 'init SaySentenceActionServer'
         self._action_name = name
         self._playback_queue = playback_queue
         self._odm = odm
         self._sentence_dict = sentence_dict
-        self._dialogflow_agent = dialogflow_agent
         self.__sentences_container = sentences_container
+        self.__cred_file = cred_file
         self._as = actionlib.SimpleActionServer(
             self._action_name, tiago_msgs.msg.SaySentenceAction, execute_cb=self.execute_cb, auto_start=False)
         self._as.start()
@@ -165,18 +171,17 @@ class SaySentenceActionServer(object):
             print u'detected "' + prefix + u'"'
             sentence_uni_no_prefix = sentence_uni[len(prefix):]
             pub_txt_msg.publish(sentence_uni_no_prefix)
+            pub_context.publish(HistoryEvent('Rico', 'say', '"%s"' % sentence_uni_no_prefix, ''))
             sound_fname = self.__sentences_container.getSentence(
                 sentence_uni_no_prefix)
             if sound_fname is None:
                 print u'using dialogflow for sentence "{}"'.format(sentence_uni)
-                response, sound_params = get_audio_from_text_dialogflow(
-                    self._dialogflow_agent, sentence_uni)
+                sound_params = text_to_audio(sentence_uni, self.__cred_file)
                 # Cut out the prefix
                 sound_params = (
                     sound_params[0], sound_params[1], prefix_time_length)
                 self.__sentences_container.addSentence(
                     sentence_uni_no_prefix, sound_params[0])
-                print 'received response (text):', response.query_result
             else:
                 print u'using cached sentence "{}"'.format(sentence_uni)
                 # Cut out the prefix
@@ -221,16 +226,43 @@ class SaySentenceActionServer(object):
         print u'Ended action for "' + sentence_uni + u'"', success
 
 
-def get_audio_from_text_dialogflow(dialogflow_agent, text):
-    response = dialogflow_agent.repeat_text(text)
+# def get_audio_from_text_dialogflow(dialogflow_agent, text):
+#     response = dialogflow_agent.repeat_text(text)
+
+#     out = tempfile.NamedTemporaryFile(delete=False)
+#     out.write(response.output_audio)
+#     fname = out.name
+#     out.close()
+#     print('Audio content written to temporary file')
+
+#     return response, (fname, 'delete', 0.0)
+
+def text_to_audio(text, cred_file_incare_dialog):
+    voice_name = 'en-US-Wavenet-A'
+    language_code = "-".join(voice_name.split("-")[:2])
+    text_input = tts.types.SynthesisInput(text=text)
+    voice_params = tts.types.VoiceSelectionParams(
+        language_code=language_code, name=voice_name
+    )
+    audio_config = tts.types.AudioConfig(audio_encoding=tts.enums.AudioEncoding.LINEAR16)
+
+    client = tts.TextToSpeechClient.from_service_account_file(cred_file_incare_dialog)
+    response = client.synthesize_speech(
+        text_input, voice_params, audio_config
+    )
 
     out = tempfile.NamedTemporaryFile(delete=False)
-    out.write(response.output_audio)
+    out.write(response.audio_content)
     fname = out.name
     out.close()
-    print('Audio content written to temporary file')
 
-    return response, (fname, 'delete', 0.0)
+    return (fname, 'delete', 0.0)
+
+    # filename = "output.wav"
+    # with open(filename, "wb") as out:
+    #     out.write(response.audio_content)
+    #     print "Generated speech saved to {}".format(filename)
+
 
 
 def detect_intent_audio(dialogflow_agent, audio_file_path):
@@ -247,16 +279,22 @@ def detect_intent_audio(dialogflow_agent, audio_file_path):
     return response, (fname, 'delete', 0.0)
 
 
-def detect_intent_text(dialogflow_agent, text):
-    response = dialogflow_agent.detect_intent_text(text)
+def detect_intent_text(text):
+    # response = dialogflow_agent.detect_intent_text(text)
+    detect_intent_and_retrieve_params = rospy.ServiceProxy(
+        'detect_intent_and_retrieve_params', DetectIntentAndRetrieveParams)
+    
+    response = detect_intent_and_retrieve_params(text)
 
-    out = tempfile.NamedTemporaryFile(delete=False)
-    out.write(response.output_audio)
-    fname = out.name
-    out.close()
-    print('Audio content written to temporary file')
 
-    return response, (fname, 'delete', 0.0)
+
+    # out = tempfile.NamedTemporaryFile(delete=False)
+    # out.write(response.output_audio)
+    # fname = out.name
+    # out.close()
+    # print('Audio content written to temporary file')
+
+    return response
 
 
 pub_txt_msg = rospy.Publisher('txt_msg', String, queue_size=10)
@@ -264,6 +302,9 @@ pub_txt_voice_cmd_msg = rospy.Publisher(
     'txt_voice_cmd_msg', String, queue_size=10)
 pub_cmd = rospy.Publisher('rico_cmd', tiago_msgs.msg.Command, queue_size=10)
 pub_vad_enabled = rospy.Publisher('vad_enabled', Bool, queue_size=10)
+pub_context = rospy.Publisher('/context/push', HistoryEvent, queue_size=10)
+
+cred_file_incare_dialog = os.environ['GOOGLE_CONVERSATIONAL_DIALOGFLOW']
 
 
 class PlaybackQueue:
@@ -325,55 +366,110 @@ class PlaybackQueue:
 
         pub_vad_enabled.publish(True)
 
-is_prompting = False
-query_text = ''
+# def retireve_params(query, intent_name, params):
+#     params_map = {}
 
-def callback_common(response, sound_file, playback_queue):
-    print 'response_id', response.response_id
-    print 'query_result', response.query_result
-    print 'webhook_status', response.webhook_status
+#     for param in params:
+#         if param.startswith('question_'):
+#             params_map[param] = param.replace('question_', '')
 
-    global query_text
-    global is_prompting
+#     params_for_nlp = []
 
-    if not is_prompting:
-        query_text = response.query_result.query_text
+#     for param in params:
+#         if param in params_map:
+#             params_for_nlp.append(params_map[param])
+#         else:
+#             params_for_nlp.append(param)
 
-    all_required_params_present = response.query_result.all_required_params_present
+#     intent_name_for_nlp = intent_name.split(" AUTOGENERATED ")[0] if " AUTOGENERATED " in intent_name else intent_name
+    
+#     python3_path = '/home/nkvch/tiago_public_ws/src/rcprg/task_database/src/python3_script/venv/bin/python'
+#     script_path = '/home/nkvch/tiago_public_ws/src/rcprg/task_database/src/python3_script/script.py'
 
-    if not all_required_params_present:
-        is_prompting = True
-        pub_txt_msg.publish(response.query_result.fulfillment_text)
-        playback_queue.addSound(sound_file)
+#     data = subprocess.check_output([
+#         python3_path,
+#         script_path,
+#         query,
+#         intent_name_for_nlp
+#     ] + params_for_nlp)
+
+#     dict_data = json.loads(data)
+
+#     print dict_data
+
+#     for key in dict_data.keys():
+#         if key in params_map.values():
+#             new_key = params_map.keys()[params_map.values().index(key)]
+#             dict_data[new_key] = dict_data.pop(key)
+    
+#     return dict_data
+
+
+# def try_retrieve_parameters(query, intent_id, intent_name):
+#     get_params_for_scenario = rospy.ServiceProxy('get_params_for_scenario', GetParamsForScenario)
+#     get_scenario_for_intent = rospy.ServiceProxy('get_scenario_for_intent', GetScenarioForIntent)
+
+#     scenario_id = get_scenario_for_intent(intent_id).scenario.id
+#     params = get_params_for_scenario(int(scenario_id), True).params
+
+#     print 'params', params
+
+#     data = retireve_params(query, intent_name, params)
+
+#     return data
+
+
+# params_by_nlp = None
+# is_prompting = False
+# query_text = ''
+
+def say(text, playback_queue):
+    pub_txt_msg.publish(text)
+    sound_file = text_to_audio(text, cred_file_incare_dialog)
+    playback_queue.addSound(sound_file)
+    pub_context.publish(HistoryEvent(
+        'Rico',
+        'say',
+        '"%s"' % text,
+        ''
+    ))
+
+def callback_common(response, playback_queue):
+    if not response.matched:
+        print 'No intent matched'
+        say('Sorry i don\'t understand', playback_queue)
+        return
+
+    if not response.all_parameters_present:
+        print 'Not all parameters present'
+        say(response.fulfilling_question, playback_queue)
         return
 
     cmd = tiago_msgs.msg.Command()
-    cmd.query_text = query_text
-    cmd.intent_name = response.query_result.intent.name
-    for param_name, param in response.query_result.parameters.fields.iteritems():
+    cmd.query_text = ''#query_text
+    cmd.intent_name = unicode(response.intent_name, 'utf-8')
+    for param_name, param in zip(response.retrieved_param_names, response.retrieved_param_values):
 
-        param_str = unicode(param)
-        colon_idx = param_str.find(':')
-        param_type = param_str[0:colon_idx]
-        # assert param_type == 'string_value'
-        param_value = param_str[colon_idx+1:].strip()[1:-1]
-        value_end = param_value.find('\"')
-        if value_end != -1:
-            param_value = param_value[0:value_end]
+        # param_str = unicode(param)
+        # colon_idx = param_str.find(':')
+        # param_type = param_str[0:colon_idx]
+        # # assert param_type == 'string_value'
+        # param_value = param_str[colon_idx+1:].strip()[1:-1]
+        # value_end = param_value.find('\"')
+        # if value_end != -1:
+        #     param_value = param_value[0:value_end]
 
         # print 'param_name: "' + param_name + '"'
         # print 'param_type: "' + param_type + '"'
         # print 'param_value: "' + param_value + '"'
 
-        cmd.param_names.append(param_name)
-        cmd.param_values.append(param_value)
+        cmd.param_names.append(unicode(param_name, 'utf-8'))
+        cmd.param_values.append(unicode(param, 'utf-8'))
 
-    cmd.confidence = response.query_result.intent_detection_confidence
-    cmd.response_text = response.query_result.fulfillment_text
+    cmd.confidence = 1.0
+    cmd.response_text = u'Okej'
     # print "CMD: ", cmd
     pub_cmd.publish(cmd)
-    is_prompting = False
-    query_text = ''
 
     # this used to print Dialogflow responses to chat app
 
@@ -382,17 +478,30 @@ def callback_common(response, sound_file, playback_queue):
     # playback_queue.addSound(sound_file)
 
 
-def callback(data, dialogflow_agent, playback_queue):
+def callback(data, playback_queue):
     rospy.loginfo("I heard %s", data.data)
-    response, sound_file = detect_intent_text(dialogflow_agent, data.data)
-    callback_common(response, sound_file, playback_queue)
+    pub_context.publish(HistoryEvent(
+        'Rico',
+        'hear',
+        '"%s"' % data.data,
+        ''
+    ))
+    response = detect_intent_text(data.data)
+
+    callback_common(response, playback_queue)
 
 
-def callback_wav(data, dialogflow_agent, playback_queue):
+def callback_wav(data, playback_queue):
     rospy.loginfo("I recorded %s", data.data)
-    response, sound_file = detect_intent_audio(dialogflow_agent, data.data)
+    pub_context.publish(HistoryEvent(
+        'Rico',
+        'hear',
+        '"%s"' % data.data,
+        ''
+    ))
+    response = detect_intent_audio(data.data, cred_file_incare_dialog)
     pub_txt_voice_cmd_msg.publish(response.query_result.query_text)
-    callback_common(response, sound_file, playback_queue)
+    callback_common(response, playback_queue)
 
 
 def callback_new_intent(data, dialogflow_agent):
@@ -506,6 +615,9 @@ def listener():
     # name for our 'listener' node so that multiple listeners can
     # run simultaneously.
     rospy.init_node('talker', anonymous=True)
+    rospy.wait_for_service('get_scenario_for_intent')
+    rospy.wait_for_service('get_params_for_scenario')
+    rospy.wait_for_service('detect_intent_and_retrieve_params')
 
     odm = Odmieniacz()
     playback_queue = PlaybackQueue()
@@ -544,25 +656,22 @@ def listener():
     # if not 'GOOGLE_CREDENTIALS_TEXT_TO_SPEECH' in os.environ:
     #     raise Exception('Env variable "GOOGLE_CREDENTIALS_TEXT_TO_SPEECH" is not set')
 
-    cred_file_incare_dialog = os.environ['GOOGLE_CONVERSATIONAL_DIALOGFLOW']
 
-    dialogflow_agent = DialogflowAgent(
-        agent_name, 'me4', cred_file_incare_dialog)
+    # dialogflow_agent = DialogflowAgent(
+    #     agent_name, 'me4', cred_file_incare_dialog)
     # cred_file_text_to_speech = os.environ['GOOGLE_CREDENTIALS_TEXT_TO_SPEECH']
 
-    rospy.Subscriber("txt_send", String, lambda x: callback(
-        x, dialogflow_agent, playback_queue))
+    rospy.Subscriber("txt_send", String, lambda x: callback(x, playback_queue))
 
-    rospy.Subscriber("wav_send", String, lambda x: callback_wav(
-        x, dialogflow_agent, playback_queue))
+    rospy.Subscriber("wav_send", String, lambda x: callback_wav(x, playback_queue))
 
-    rospy.Subscriber('/new_intent', tiago_msgs.msg.NewIntent, lambda x: callback_new_intent(x, dialogflow_agent))
+    rospy.Subscriber('/new_intent', tiago_msgs.msg.NewIntent, lambda x: callback_new_intent(x))
     
 
     data2_dir = data_dir + '/container'
     sc = SentencesContainer(data2_dir)
     say_as = SaySentenceActionServer(
-        'rico_says', playback_queue, odm, sentence_dict, dialogflow_agent, sc)
+        'rico_says', playback_queue, odm, sentence_dict, sc, cred_file_incare_dialog)
 
     # spin() simply keeps python from exiting until this node is stopped
     while not rospy.is_shutdown():

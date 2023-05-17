@@ -1,12 +1,12 @@
 Nic nie robię. 
 Nie rozumiem pytania. 
 Zmieniam wysokość. 
-Jadę do kuchni. 
-Jadę do pokoju.
-Jadę do salonu.
-Jadę do korytarza.
-Jadę do warsztatu.
-Jadę do przejścia.
+i\'m going to kuchni. 
+i\'m going to pokoju.
+i\'m going to salonu.
+i\'m going to korytarza.
+i\'m going to warsztatu.
+i\'m going to przejścia.
 Nie wiem gdzie to jest.
 Dojechałem do kuchni.
 Dojechałem do pokoju.

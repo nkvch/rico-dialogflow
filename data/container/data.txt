@@ -1,35 +1,35 @@
 nie wiem o co chodzi*sound_732645.wav
-jadę do kuchni*sound_978776.wav
+i\'m going to kuchni*sound_978776.wav
 dojechałem do kuchni*sound_772296.wav
 podaj mi wodę i potwierdź*sound_680417.wav
-jadę do nieznane*sound_262138.wav
+i\'m going to nieznane*sound_262138.wav
 dojechałem do nieznane*sound_470760.wav
 odbierz wodę i potwierdź*sound_783107.wav
 czekam na odebranie wody*sound_779044.wav
 wiozę wodę*sound_471210.wav
 zakończyłem zadanie*sound_462515.wav
-jadę do pokoju*sound_315989.wav
+i\'m going to pokoju*sound_315989.wav
 dojechałem do pokoju*sound_558284.wav
 nic nie wiozę*sound_309274.wav
-jadę do salonu*sound_623920.wav
+i\'m going to salonu*sound_623920.wav
 dojechałem do salonu*sound_577225.wav
-jadę do warsztatu*sound_312602.wav
+i\'m going to warsztatu*sound_312602.wav
 dojechałem do warsztatu*sound_387563.wav
 podaj mi kawę i potwierdź*sound_483893.wav
 odbierz kawę i potwierdź*sound_250035.wav
-jadę do fotela*sound_673951.wav
+i\'m going to fotela*sound_673951.wav
 dojechałem do fotela*sound_944453.wav
-jadę do ładowarki*sound_80180.wav
+i\'m going to ładowarki*sound_80180.wav
 dojechałem do ładowarki*sound_668553.wav
-jadę do słonia*sound_436053.wav
+i\'m going to słonia*sound_436053.wav
 dojechałem do słonia*sound_674333.wav
-jadę do wojtasa*sound_516780.wav
+i\'m going to wojtasa*sound_516780.wav
 dojechałem do wojtasa*sound_355540.wav
 jestem teraz zajęty*sound_700685.wav
 nie słyszę*sound_175066.wav
 nie wiem gdzie jest przedpokój*sound_79435.wav
 podaj mi piwo i potwierdź*sound_829554.wav
-jadę do korytarza*sound_470212.wav
+i\'m going to korytarza*sound_470212.wav
 dojechałem do korytarza*sound_664255.wav
 odbierz piwo i potwierdź*sound_352070.wav
 podaj mi herbatę i potwierdź*sound_974646.wav
@@ -38,3 +38,18 @@ nie wiem gdzie jest pottera*sound_959948.wav
 czekam na odebranie herbaty*sound_543035.wav
 podaj mi budkę i potwierdź*sound_245864.wav
 odbierz budkę i potwierdź*sound_366888.wav
+i\'m going to tomka*sound_202383.wav
+dojechałem do tomka*sound_296406.wav
+i'm going to keeper*sound_221828.wav
+i came to keeper*sound_500566.wav
+9 actor: rico action: say complement: "hello how can i assist you today?" description: addressing the keeper in a polite manner  10 actor: keeper action: give complement: "a cup of hot black tea with sugar" description: handing over the requested goods to rico  11 actor: rico action: say complement: "thank you i will deliver it to the senior right away" description: expressing gratitude to the keeper and informing them of the next step  12 actor: rico action: start performing complement: "deliver tea" task description: heading towards the senior's room to deliver the tea  13 actor: rico action: come to complement: senior's room description: arriving at the senior's room  14 actor: rico action: say complement: "hello i have brought your hot black tea with sugar as requested" description: greeting the*sound_193393.wav
+hello i am here to request some goods that a senior has asked for could you please provide me with hot black tea with sugar?*sound_73094.wav
+hello one of the seniors requested some black tea could you please give me some tea bags and a cup? they want it cold with no sugar thank you*sound_440300.wav
+hello i am here to request some goods for one of the seniors they have requested hot black tea with sugar can you please provide me with the necessary items to prepare the tea?*sound_549801.wav
+siema*sound_913708.wav
+cześć*sound_160437.wav
+hej jestem rico*sound_224187.wav
+wykryłem hazard temperaturowy wracam do domu*sound_738164.wav
+hej hej*sound_65243.wav
+siema siema*sound_843079.wav
+mogą wpłynąć na bezpieczeństwo*sound_900042.wav
