@@ -9,6 +9,10 @@ project(dialogflow)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   rosbridge_server
+  roscpp
+  actionlib
+  std_msgs
+  tiago_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -104,8 +108,9 @@ catkin_python_setup()
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES dialogflow
-#  CATKIN_DEPENDS rosbridge_server
+ CATKIN_DEPENDS roscpp
 #  DEPENDS system_lib
+
 )
 
 ###########
@@ -117,6 +122,7 @@ catkin_package(
 include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
+  ${actionlib_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -196,3 +202,7 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+add_executable(test src/test.cpp)
+target_link_libraries(test ${catkin_LIBRARIES} ${actionlib_LIBRARIES})
+add_dependencies(test ${catkin_EXPORTED_TARGETS})

@@ -615,9 +615,9 @@ def listener():
     # name for our 'listener' node so that multiple listeners can
     # run simultaneously.
     rospy.init_node('talker', anonymous=True)
-    rospy.wait_for_service('get_scenario_for_intent')
-    rospy.wait_for_service('get_params_for_scenario')
-    rospy.wait_for_service('detect_intent_and_retrieve_params')
+    # rospy.wait_for_service('get_scenario_for_intent')
+    # rospy.wait_for_service('get_params_for_scenario')
+    # rospy.wait_for_service('detect_intent_and_retrieve_params')
 
     odm = Odmieniacz()
     playback_queue = PlaybackQueue()
