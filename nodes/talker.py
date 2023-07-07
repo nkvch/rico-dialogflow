@@ -614,10 +614,13 @@ def listener():
     # anonymous=True flag means that rospy will choose a unique
     # name for our 'listener' node so that multiple listeners can
     # run simultaneously.
+    print 'here'
     rospy.init_node('talker', anonymous=True)
-    rospy.wait_for_service('get_scenario_for_intent')
-    rospy.wait_for_service('get_params_for_scenario')
+    # rospy.wait_for_service('get_scenario_for_intent')
+    # rospy.wait_for_service('get_params_for_scenario')
     rospy.wait_for_service('detect_intent_and_retrieve_params')
+
+    print 'now here'
 
     odm = Odmieniacz()
     playback_queue = PlaybackQueue()
@@ -649,6 +652,8 @@ def listener():
     #play_sound(sound_fname[0], 0.0)
     # print 'received response:', response.query_result
     # exit(0)
+
+    print "WE ARE HERE"
 
     if not 'GOOGLE_CONVERSATIONAL_DIALOGFLOW' in os.environ:
         raise Exception(

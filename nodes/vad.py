@@ -61,7 +61,7 @@ THR_POWER = 100
 DO_NORMALIZE = True
 
 # device id
-DEVICE_ID = 0
+DEVICE_ID = 1
 
 
 
@@ -521,7 +521,8 @@ def main():
             keyword_file_paths=keyword_file_paths,
             sensitivities=sensitivities,
             output_path=None,
-            input_device_index=DEVICE_ID).run()
+            # input_device_index=2
+        ).run()
 
 
 if __name__ == '__main__':
