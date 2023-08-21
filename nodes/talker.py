@@ -24,6 +24,7 @@ import shutil
 import unicodedata
 import pl_nouns.odmiana as ro
 from google.cloud import texttospeech as tts
+from google.cloud import speech as sp
 
 import pyaudio
 import subprocess
@@ -265,6 +266,22 @@ def text_to_audio(text, cred_file_incare_dialog):
     #     out.write(response.audio_content)
     #     print "Generated speech saved to {}".format(filename)
 
+def audio_to_text(audio_file_path, cred_file_incare_dialog):
+    client = sp.SpeechClient.from_service_account_file(cred_file_incare_dialog)
+    with open(audio_file_path, "rb") as audio_file:
+        content = audio_file.read()
+        audio = sp.types.RecognitionAudio(content=content)
+    config = sp.types.RecognitionConfig(
+        encoding=sp.enums.RecognitionConfig.AudioEncoding.LINEAR16,
+        sample_rate_hertz=16000,
+        language_code="en-US",
+    )
+    response = client.recognize(config, audio)
+    print(response)
+
+    text = response.results[0].alternatives[0].transcript
+
+    return text
 
 
 def detect_intent_audio(dialogflow_agent, audio_file_path):
@@ -383,124 +400,19 @@ class PlaybackQueue:
         pub_vad_enabled.publish(True)
 
 
-def say(text, playback_queue):
-    pub_txt_msg.publish(text)
-    sound_file = text_to_audio(text, cred_file_incare_dialog)
-    playback_queue.addSound(sound_file)
-    pub_context.publish(HistoryEvent(
-        'Rico',
-        'say',
-        '"%s"' % text,
-        ''
-    ))
-
-def callback_common(response, playback_queue):
-    pass
-    # if isinstance(response, DetectIntentAndRetrieveParamsResponse):
-    #     print 'callback_common: DetectIntentAndRetrieveParamsResponse'
-
-    #     if not response.matched:
-    #         print 'No intent matched'
-    #         say('Sorry i don\'t understand', playback_queue)
-    #         return
-
-    #     if not response.all_parameters_present:
-    #         print 'Not all parameters present'
-    #         say(response.fulfilling_question, playback_queue)
-    #         return
-
-    #     cmd = tiago_msgs.msg.Command()
-    #     cmd.query_text = ''#query_text
-    #     cmd.intent_name = unicode(response.intent_name, 'utf-8')
-    #     for param_name, param in zip(response.retrieved_param_names, response.retrieved_param_values):
-
-    #         # param_str = unicode(param)
-    #         # colon_idx = param_str.find(':')
-    #         # param_type = param_str[0:colon_idx]
-    #         # # assert param_type == 'string_value'
-    #         # param_value = param_str[colon_idx+1:].strip()[1:-1]
-    #         # value_end = param_value.find('\"')
-    #         # if value_end != -1:
-    #         #     param_value = param_value[0:value_end]
-
-    #         # print 'param_name: "' + param_name + '"'
-    #         # print 'param_type: "' + param_type + '"'
-    #         # print 'param_value: "' + param_value + '"'
-
-    #         cmd.param_names.append(unicode(param_name, 'utf-8'))
-    #         cmd.param_values.append(unicode(param, 'utf-8'))
-
-    #     cmd.confidence = 1.0
-    #     cmd.response_text = u'Okej'
-    #     # print "CMD: ", cmd
-    #     pub_cmd.publish(cmd)
-
-    #     # this used to print Dialogflow responses to chat app
-
-    #     # if len(response.query_result.fulfillment_text) > 0:
-    #     #     pub_txt_msg.publish(response.query_result.fulfillment_text)
-    #     # playback_queue.addSound(sound_file)
-    # elif isinstance(response, DetectIntentDuringTaskResponse):
-    #     print 'callback_common: DetectIntentDuringTaskResponse'
-
-    #     if not response.matched:
-    #         print 'No intent matched'
-    #         say('Sorry i don\'t understand', playback_queue)
-    #         return
-        
-    #     cmd = tiago_msgs.msg.Command()
-
-    #     cmd.query_text = ''#query_text
-    #     cmd.intent_name = unicode(response.intent_name, 'utf-8')
-
-    #     cmd.param_names.append('unexpected_question')
-
-    #     cmd.param_values.append('true' if response.unexpected_question else 'false')
-
-    #     cmd.confidence = 1.0
-
-    #     cmd.response_text = u''
-
-    #     pub_filtered_cmd.publish(cmd)
-
-
 def callback(data, playback_queue):
     rospy.loginfo("I heard %s", data.data)
 
-    # guess_actor = rospy.ServiceProxy('guess_actor', GuessActor)
-
-    # actor = guess_actor(data.data).actor
-
-    # pub_context.publish(HistoryEvent(
-    #     actor,
-    #     'say',
-    #     '"%s"' % data.data,
-    #     ''
-    # ))
-    # response = detect_intent_text(data.data)
-
-    # callback_common(response, playback_queue)
-
-    # pass to language processor
     pub_rico_hear.publish(data.data)
 
 
 def callback_wav(data, playback_queue):
     rospy.loginfo("I recorded %s", data.data)
 
-    # # guess_actor = rospy.ServiceProxy('guess_actor', GuessActor)
+    text = audio_to_text(data.data, cred_file_incare_dialog)
 
-    # # actor = guess_actor(data.data).actor
-
-    # # pub_context.publish(HistoryEvent(
-    # #     actor,
-    # #     'say',
-    # #     '"%s"' % data.data,
-    # #     ''
-    # # ))
-    # response = detect_intent_audio(data.data, cred_file_incare_dialog)
-    # pub_txt_voice_cmd_msg.publish(response.query_result.query_text)
-    # callback_common(response, playback_queue)
+    pub_txt_voice_cmd_msg.publish(text)
+    pub_rico_hear.publish(text)
 
 
 def callback_new_intent(data, dialogflow_agent):
