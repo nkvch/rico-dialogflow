@@ -32,10 +32,6 @@ import json
 
 import wave
 
-# from dialogflow_agent.interfaces.DialogflowAgent import DialogflowAgent
-from language_processor.srv import DetectIntentAndRetrieveParams, DetectIntentAndRetrieveParamsResponse, DetectIntentDuringTask, DetectIntentDuringTaskResponse
-from language_processor.srv import GuessActor
-from task_database.srv import GetScenarioForIntent, GetParamsForScenario
 
 def strip_inter(string):
     return string.replace(".", "").replace(",", "")
@@ -578,9 +574,6 @@ def listener():
     rospy.Subscriber("txt_send", String, lambda x: callback(x, playback_queue))
 
     rospy.Subscriber("wav_send", String, lambda x: callback_wav(x, playback_queue))
-
-    rospy.Subscriber('/new_intent', tiago_msgs.msg.NewIntent, lambda x: callback_new_intent(x))
-    
 
     data2_dir = data_dir + '/container'
     sc = SentencesContainer(data2_dir)
