@@ -169,8 +169,6 @@ class SaySentenceActionServer(object):
         if sentence_uni.startswith(prefix):
             print u'detected "' + prefix + u'"'
             sentence_uni_no_prefix = sentence_uni[len(prefix):]
-            pub_txt_msg.publish(sentence_uni_no_prefix)
-            pub_context.publish(HistoryEvent('Rico', 'say', '"%s"' % sentence_uni_no_prefix, ''))
             sound_fname = self.__sentences_container.getSentence(
                 sentence_uni_no_prefix)
             if sound_fname is None:
@@ -206,6 +204,8 @@ class SaySentenceActionServer(object):
         if best_d < 5:
             print "Wiem co powiedzieć!", ss, best_k, sound_params
             sound_id = self._playback_queue.addSound(sound_params)
+            pub_txt_msg.publish(sentence_uni_no_prefix)
+            pub_context.publish(HistoryEvent('Rico', 'say', '"%s"' % sentence_uni_no_prefix, ''))
 
             while not self._playback_queue.finishedSoundId(sound_id) and not rospy.is_shutdown():
                 # check that preempt has not been requested by the client
@@ -224,17 +224,6 @@ class SaySentenceActionServer(object):
 
         print u'Ended action for "' + sentence_uni + u'"', success
 
-
-# def get_audio_from_text_dialogflow(dialogflow_agent, text):
-#     response = dialogflow_agent.repeat_text(text)
-
-#     out = tempfile.NamedTemporaryFile(delete=False)
-#     out.write(response.output_audio)
-#     fname = out.name
-#     out.close()
-#     print('Audio content written to temporary file')
-
-#     return response, (fname, 'delete', 0.0)
 
 def text_to_audio(text, cred_file_incare_dialog):
     voice_name = 'en-US-Wavenet-A'
@@ -256,11 +245,6 @@ def text_to_audio(text, cred_file_incare_dialog):
     out.close()
 
     return (fname, 'delete', 0.0)
-
-    # filename = "output.wav"
-    # with open(filename, "wb") as out:
-    #     out.write(response.audio_content)
-    #     print "Generated speech saved to {}".format(filename)
 
 def audio_to_text(audio_file_path, cred_file_incare_dialog):
     client = sp.SpeechClient.from_service_account_file(cred_file_incare_dialog)
@@ -292,35 +276,6 @@ def detect_intent_audio(dialogflow_agent, audio_file_path):
     out.close()
 
     return response, (fname, 'delete', 0.0)
-
-
-# def detect_intent_text(text):
-#     # response = dialogflow_agent.detect_intent_text(text)
-
-#     is_currently_in_task = is_in_task().result
-
-#     response = None
-
-#     if is_currently_in_task:
-#         print "Currently in task, using detect_intent_during_task"
-#         detect_intent_during_task = rospy.ServiceProxy(
-#             'detect_intent_during_task', DetectIntentDuringTask)
-        
-#         response = detect_intent_during_task(text)
-#     else:
-#         print "Not currently in task, using detect_intent_and_retrieve_params"
-#         detect_intent_and_retrieve_params = rospy.ServiceProxy(
-#             'detect_intent_and_retrieve_params', DetectIntentAndRetrieveParams)
-        
-#         response = detect_intent_and_retrieve_params(text)
-
-#     # out = tempfile.NamedTemporaryFile(delete=False)
-#     # out.write(response.output_audio)
-#     # fname = out.name
-#     # out.close()
-#     # print('Audio content written to temporary file')
-
-#     return response
 
 
 pub_txt_msg = rospy.Publisher('txt_msg', String, queue_size=10)
