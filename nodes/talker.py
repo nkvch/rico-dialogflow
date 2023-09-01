@@ -255,6 +255,7 @@ def audio_to_text(audio_file_path, cred_file_incare_dialog):
         encoding=sp.enums.RecognitionConfig.AudioEncoding.LINEAR16,
         sample_rate_hertz=16000,
         language_code="en-US",
+        enable_automatic_punctuation=True,
     )
     response = client.recognize(config, audio)
     print(response)
