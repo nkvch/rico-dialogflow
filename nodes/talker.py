@@ -31,7 +31,42 @@ import subprocess
 import json
 
 import wave
+import requests
 
+OPENAI_API_KEY = os.environ['OPENAI_API_KEY']
+
+def convert_to_wav(input_file):
+    output_file = input_file.replace('.mp3', '.wav')  # Change extension based on input format
+    subprocess.call(['ffmpeg', '-y', '-i', input_file, output_file])
+    return output_file
+
+def text_to_audio_openai(text):
+    url = "https://api.openai.com/v1/audio/speech"
+
+    headers = {
+        'Authorization': 'Bearer %s' % OPENAI_API_KEY,
+        'Content-Type': 'application/json'
+    }
+
+    data = {
+        "model": "tts-1",
+        "input": text,
+        "voice": "echo"        
+    }
+
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+
+    if response.status_code != 200:
+        raise Exception("OpenAI TTS API request failed with status code %d and message: %s" % (response.status_code, response.text))
+
+    out = tempfile.NamedTemporaryFile(delete=False, suffix='.mp3')
+    out.write(response.content)
+    fname = out.name
+    out.close()
+
+    print 'temp fname!!!!!', fname
+
+    return (fname, 'delete', 0.0)
 
 def strip_inter(string):
     return string.replace(".", "").replace(",", "")
@@ -93,6 +128,8 @@ class SentencesContainer:
         # Copy the sound file
         # Create unique name for the file
         while True:
+            if '.mp3' in sound_fname:
+                sound_fname = convert_to_wav(sound_fname)
             sound_fname_copy = u'sound_{}.wav'.format(
                 random.randint(0, 1000000))
             if not path.exists(self.__path + '/' + sound_fname_copy):
@@ -163,7 +200,8 @@ class SaySentenceActionServer(object):
         sentence_uni = goal.sentence.decode('utf-8')
         sentence_uni = self._odm.odmien(sentence_uni)
 
-        prefix = u'niekorzystne warunki pogodowe'
+        # prefix = u'niekorzystne warunki pogodowe'
+        prefix = u''
         prefix_time_length = 2.1
         ss = strip_inter(sentence_uni).strip().upper()
         if sentence_uni.startswith(prefix):
@@ -172,17 +210,17 @@ class SaySentenceActionServer(object):
             sound_fname = self.__sentences_container.getSentence(
                 sentence_uni_no_prefix)
             if sound_fname is None:
-                print u'using dialogflow for sentence "{}"'.format(sentence_uni)
-                sound_params = text_to_audio(sentence_uni, self.__cred_file)
+                print u'using text_to_audio for sentence "{}"'.format(sentence_uni)
+                sound_params = text_to_audio_openai(sentence_uni)
                 # Cut out the prefix
                 sound_params = (
-                    sound_params[0], sound_params[1], prefix_time_length)
+                    sound_params[0], sound_params[1], 0.0)
                 self.__sentences_container.addSentence(
                     sentence_uni_no_prefix, sound_params[0])
             else:
                 print u'using cached sentence "{}"'.format(sentence_uni)
                 # Cut out the prefix
-                sound_params = (sound_fname, 'keep', prefix_time_length)
+                sound_params = (sound_fname, 'keep', 0.0)
             best_d = 0
             best_k = None
         else:
@@ -346,6 +384,11 @@ class PlaybackQueue:
         print 'playBlockingsound: BEGIN'
         print '  file:', fname
 
+        if '.mp3' in fname:
+            fname = convert_to_wav(fname)
+
+        print 'Converted file:', fname
+
         play_sound(fname, start_time)
         print 'playBlockingsound: END'
 
@@ -365,17 +408,6 @@ def callback_wav(data, playback_queue):
 
     pub_txt_voice_cmd_msg.publish(text)
     pub_rico_hear.publish(text)
-
-
-def callback_new_intent(data, dialogflow_agent):
-    intent_name = data.trigger_phrase
-    trigger_phrases = [data.trigger_phrase]
-    question = data.questions[0]
-    param_name = remove_spaces(remove_diacritics(question))
-    parameters = [{'name': param_name, 'prompt': question + '?'}]
-    autoresponses = ['dziękuję']
-    dialogflow_agent.create_intent(intent_name, trigger_phrases, autoresponses, parameters)
-
 
 
 class Odmieniacz:
