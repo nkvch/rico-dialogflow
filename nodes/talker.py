@@ -33,6 +33,7 @@ import json
 import wave
 import requests
 
+
 OPENAI_API_KEY = os.environ['OPENAI_API_KEY']
 
 def convert_to_wav(input_file):
@@ -67,6 +68,29 @@ def text_to_audio_openai(text):
     print 'temp fname!!!!!', fname
 
     return (fname, 'delete', 0.0)
+
+def audio_to_text_openai(audio_file_path):
+    url = "https://api.openai.com/v1/audio/transcriptions"
+
+    curl_command = [
+        'curl', '--request', 'POST',
+        '--url', url,
+        '--header', 'Authorization: Bearer ' + OPENAI_API_KEY,
+        '--header', 'Content-Type: multipart/form-data',
+        '--form', 'file=@' + audio_file_path,
+        '--form', 'model=whisper-1'
+    ]
+
+    process = subprocess.Popen(curl_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = process.communicate()
+
+    if process.returncode != 0:
+        raise Exception('curl command failed with code %d and message: %s' % (process.returncode, stderr))
+
+    response = json.loads(stdout.decode('utf-8'))
+    
+    return response['text']
+
 
 def strip_inter(string):
     return string.replace(".", "").replace(",", "")
@@ -404,7 +428,7 @@ def callback(data, playback_queue):
 def callback_wav(data, playback_queue):
     rospy.loginfo("I recorded %s", data.data)
 
-    text = audio_to_text(data.data, cred_file_incare_dialog)
+    text = audio_to_text_openai(data.data)
 
     pub_txt_voice_cmd_msg.publish(text)
     pub_rico_hear.publish(text)
