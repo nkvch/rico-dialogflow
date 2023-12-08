@@ -78,7 +78,8 @@ def audio_to_text_openai(audio_file_path):
         '--header', 'Authorization: Bearer ' + OPENAI_API_KEY,
         '--header', 'Content-Type: multipart/form-data',
         '--form', 'file=@' + audio_file_path,
-        '--form', 'model=whisper-1'
+        '--form', 'model=whisper-1',
+        '--form', 'language=en'
     ]
 
     process = subprocess.Popen(curl_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -429,6 +430,8 @@ def callback_wav(data, playback_queue):
     rospy.loginfo("I recorded %s", data.data)
 
     text = audio_to_text_openai(data.data)
+
+    rospy.loginfo("I heard %s", text)
 
     pub_txt_voice_cmd_msg.publish(text)
     pub_rico_hear.publish(text)
