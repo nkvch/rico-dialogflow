@@ -431,7 +431,7 @@ def callback_wav(data, playback_queue):
 
     text = audio_to_text_openai(data.data)
 
-    rospy.loginfo("I heard %s", text)
+    rospy.loginfo("I heard %s", unicode(text, 'utf-8'))
 
     pub_txt_voice_cmd_msg.publish(text)
     pub_rico_hear.publish(text)
